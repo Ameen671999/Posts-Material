@@ -1,6 +1,7 @@
 const express = require ("express");
 const Post = require ("../models/post")
 const multer = require ("multer");
+const { count } = require("../models/post");
 
 const router = express.Router();
 
@@ -70,15 +71,28 @@ router.put("/:id", multer({storage: storage}).single("image"),
 })
 
 router.get("", (req, res, next) => {
-  Post.find().then((documents) => {
+  // console.log(+req.query.pagesize)
+  const pageSize = +req.query.pagesize; //to convert string to number
+  const currentPage = +req.query.page;
+  const postQuery = Post.find();
+  let fetchedPosts ;
+  if(pageSize && currentPage) {
+    postQuery.skip(pageSize * (currentPage - 1)).limit(pageSize)
+  }
+  postQuery.then((documents) => {
+    fetchedPosts = documents;
+    return Post.count();
+  }).then((count) => {
     res.status(200).json({
       message: "Post fetched successfully",
-      posts: documents,
+      posts: fetchedPosts,
+      maxPosts: count
     });
   });
 });
 
 router.get("/:id",(req,res,next) => {
+
   Post.findById(req.params.id).then(post => {
     if(post) {
       res.status(200).json(post)
